@@ -1,0 +1,17 @@
+name = "PLEXOSUtils"
+uuid = "05faf425-d728-49da-9df3-01114615952c"
+authors = ["Gord Stephen <gord.stephen@nrel.gov>"]
+version = "0.0.1"
+
+[deps]
+EzXML = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
+InfoZIP = "f4508453-b816-52ab-a864-26fc7f6211fc"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
