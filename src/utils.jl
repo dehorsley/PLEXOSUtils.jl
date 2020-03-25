@@ -10,4 +10,6 @@ function getchildtext(name::String, e::Node)
     return nodecontent(resultnode)
 end
 
+getchildfloat(name::String, e::Node) = parse(Float64, getchildtext(name, e))
 getchildint(name::String, e::Node) = parse(Int, getchildtext(name, e))
+getchildbool(name::String, e::Node) = parse(Bool, getchildtext(name, e))
