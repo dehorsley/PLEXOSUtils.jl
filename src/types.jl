@@ -101,6 +101,21 @@ struct PLEXOSCategory
 
 end
 
+
+struct PLEXOSAttribute
+    name::String
+    description::String
+    enum::Int
+    class::PLEXOSClass
+end
+
+PLEXOSAttribute(e::Node, d::AbstractDataset) =
+    PLEXOSAttribute(getchildtext("name", e),
+                    getchildtext("description", e),
+                    getchildint("enum_id", e),
+                    d.classes[getchildint("class_id", e)])
+
+
 struct PLEXOSCollection
     name::String
     complementname::Union{Nothing,String}
@@ -129,8 +144,6 @@ struct PLEXOSCollection
     end
 
 end
-
-
 
 
 struct PLEXOSProperty
@@ -208,6 +221,18 @@ PLEXOSMembership(e::Node, d::AbstractDataset) =
                      d.collections[getchildint("collection_id", e)],
                      d.objects[getchildint("parent_object_id", e)],
                      d.objects[getchildint("child_object_id", e)])
+
+
+struct PLEXOSAttributeData
+    value::Float64
+    attribute::PLEXOSAttribute
+    object::PLEXOSObject
+end
+
+PLEXOSAttributeData(e::Node, d::AbstractDataset) =
+    PLEXOSAttributeData(getchildfloat("value", e),
+                        d.attributes[getchildint("attribute_id", e)],
+                        d.objects[getchildint("object_id", e)])
 
 
 # Results
@@ -326,9 +351,9 @@ PLEXOSPhase4(e::Node, d::AbstractDataset) =
 struct PLEXOSKey
     membership::PLEXOSMembership
     model::PLEXOSModel
-    phase::Int # maybe parametrize on this?
+    phase::Int
     property::PLEXOSProperty
-    periodtype::Int # maybe parametrize on this?
+    periodtype::Int # not accurate, use KeyIndex.periodtype instead
     band::Int
     sample::PLEXOSSample
     timeslice::PLEXOSTimeslice

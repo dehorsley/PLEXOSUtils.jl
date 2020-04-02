@@ -1,9 +1,11 @@
 module PLEXOSUtils
 
 import EzXML: Document, eachelement, namespace, Node, nodecontent, parsexml
-import InfoZIP: open_zip
+import InfoZIP: Archive, open_zip
+import HDF5
+import HDF5: a_create, d_create, g_create, h5open, HDF5File, HDF5Group
 
-export PLEXOSSolutionDataset
+export h5plexos, PLEXOSSolutionDataset
 
 struct PLEXOSTable
     name::String
@@ -35,11 +37,13 @@ plexostables = [
     PLEXOSTable("t_class", :classes, :PLEXOSClass, 2, "class_id"),
     PLEXOSTable("t_category", :categories, :PLEXOSCategory, 3, "category_id"),
 
+    PLEXOSTable("t_attribute", :attributes, :PLEXOSAttribute, 3, "attribute_id"),
     PLEXOSTable("t_collection", :collections, :PLEXOSCollection, 3, "collection_id"),
     PLEXOSTable("t_property", :properties, :PLEXOSProperty, 4, "property_id"),
 
     PLEXOSTable("t_object", :objects, :PLEXOSObject, 4, "object_id"),
     PLEXOSTable("t_membership", :memberships, :PLEXOSMembership, 5, "membership_id"),
+    PLEXOSTable("t_attribute_data", :attribute_data, :PLEXOSAttributeData, 5),
 
     PLEXOSTable("t_period_0", :intervals, :PLEXOSPeriod0, 1, "interval_id"),
     PLEXOSTable("t_period_1", :days, :PLEXOSPeriod1, 1, "day_id"),
@@ -64,5 +68,6 @@ include("types.jl")
 include("PLEXOSSolutionDataset.jl")
 include("summarize.jl")
 include("utils.jl")
+include("h5plexos.jl")
 
 end

@@ -33,19 +33,22 @@ eval(Expr(
     )
 ))
 
-PLEXOSSolutionDataset(summary::PLEXOSSolutionDatasetSummary) =
-    PLEXOSSolutionDataset((
-        Vector{eval(t.fieldtype)}(undef, last(getfield(summary, t.fieldname)))
+function PLEXOSSolutionDataset(
+    summary::PLEXOSSolutionDatasetSummary;
+    consolidated::Bool=false)
+
+    selector = consolidated ? first : last
+
+    return PLEXOSSolutionDataset((
+        Vector{eval(t.fieldtype)}(undef, selector(getfield(summary, t.fieldname)))
         for t in plexostables)...)
 
+end
 
-function PLEXOSSolutionDataset(zippath::String)
+function PLEXOSSolutionDataset(xml::Document)
 
-    resultsarchive, xmlname = open_plexoszip(zippath)
-    xml = parsexml(resultsarchive[xmlname])
     summary = summarize(xml)
-
-    result = PLEXOSSolutionDataset(summary)
+    result = PLEXOSSolutionDataset(summary, consolidated=false)
     idxcounter = IndexCounter()
 
     for loadorder in 1:7
@@ -70,17 +73,33 @@ function PLEXOSSolutionDataset(zippath::String)
         end
     end
 
-    return result
+    return consolidate(result, summary)
 
 end
 
-# Results are driven by keyindex -> key -> (membership + property) -> collection
+function PLEXOSSolutionDataset(zippath::String)
+    resultsarchive, xmlname = open_plexoszip(zippath)
+    xml = parsexml(resultsarchive[xmlname])
+    return PLEXOSSolutionDataset(xml)
+end
 
-# Report all collections containing members
+function consolidate(
+    unconsolidated::PLEXOSSolutionDataset,
+    summary::PLEXOSSolutionDatasetSummary)
 
-# Binary data relationships - determine how data relates to
-# a period type vs phase period?
+    result = PLEXOSSolutionDataset(summary, consolidated=true)
 
-# PASA - interval only?
-# MT - interval only?
-# ST - multiple levels
+    for name in fieldnames(PLEXOSSolutionDataset)
+        idx = 0
+        vec = getfield(unconsolidated, name)
+        for i in 1:length(vec)
+            if isassigned(vec, i)
+                idx += 1
+                getfield(result, name)[idx] = vec[i]
+            end
+        end
+    end
+
+    return result
+
+end
