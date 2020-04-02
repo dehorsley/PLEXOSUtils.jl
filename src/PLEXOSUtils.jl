@@ -3,7 +3,7 @@ module PLEXOSUtils
 import EzXML: Document, eachelement, namespace, Node, nodecontent, parsexml
 import InfoZIP: Archive, open_zip
 import HDF5
-import HDF5: a_create, d_create, g_create, h5open, HDF5File, HDF5Group
+import HDF5: attrs, a_create, d_create, g_create, h5open, HDF5File, HDF5Group
 
 export h5plexos, PLEXOSSolutionDataset
 

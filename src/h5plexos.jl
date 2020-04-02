@@ -8,6 +8,7 @@ function h5plexos(
     resultvalues = phasevalues(resultsarchive)
 
     h5open(h5fileout, "w") do h5file::HDF5File
+        addconfigs!(h5file, data)
         membership_idxs = addcollections!(h5file, data, strlen, compressionlevel)
         addvalues!(h5file, data, membership_idxs, resultvalues)
     end
@@ -18,6 +19,13 @@ function h5plexos(
     #  - period type determines whether to use name/unit or summaryname/summaryunit
     #  - pull binary data and store in appropriate indices
 
+end
+
+function addconfigs!(f::HDF5File, data::PLEXOSSolutionDataset)
+    rootattrs = attrs(f)
+    for config in data.configs
+        rootattrs[config.element] = config.value
+    end
 end
 
 function addcollections!(
