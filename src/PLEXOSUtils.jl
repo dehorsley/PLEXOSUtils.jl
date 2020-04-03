@@ -3,7 +3,7 @@ module PLEXOSUtils
 import EzXML: Document, eachelement, namespace, Node, nodecontent, parsexml
 import InfoZIP: Archive, open_zip
 import HDF5
-import HDF5: attrs, a_create, d_create, g_create, h5open, HDF5File, HDF5Group
+import HDF5: attrs, d_create, exists, g_create, h5open, HDF5File, HDF5Group
 
 export h5plexos, PLEXOSSolutionDataset
 
@@ -53,16 +53,40 @@ plexostables = [
     PLEXOSTable("t_period_6", :hours, :PLEXOSPeriod6, 1, "hour_id"),
     PLEXOSTable("t_period_7", :quarters, :PLEXOSPeriod7, 1, "quarter_id"),
 
-    PLEXOSTable("t_phase_2", :pasa_intervals, :PLEXOSPhase2, 2),
-    PLEXOSTable("t_phase_3", :mt_intervals, :PLEXOSPhase3, 2),
-    PLEXOSTable("t_phase_4", :st_intervals, :PLEXOSPhase4, 2),
+    PLEXOSTable("t_phase_2", :pasa, :PLEXOSPhase2, 2),
+    PLEXOSTable("t_phase_3", :mt, :PLEXOSPhase3, 2),
+    PLEXOSTable("t_phase_4", :st, :PLEXOSPhase4, 2),
 
     PLEXOSTable("t_key", :keys, :PLEXOSKey, 6, "key_id"),
     PLEXOSTable("t_key_index", :keyindices, :PLEXOSKeyIndex, 7)
 
 ]
 
-plexostables_lookup = Dict(x.name => x for x in plexostables)
+plexostables_lookup = Dict{String,PLEXOSTable}()
+
+phase_rgx = r"^t_phase_(\d)$"
+phasenames = Dict{Int,String}()
+
+period_rgx = r"^t_period_(\d)$"
+periodnames = Dict{Int,String}()
+
+for x in plexostables
+
+    plexostables_lookup[x.name] = x
+
+    phasematch = match(phase_rgx, x.name)
+    if phasematch !== nothing
+        phase = parse(Int, phasematch[1])
+        phasenames[phase] = uppercase(string(x.fieldname))
+    end
+
+    periodmatch = match(period_rgx, x.name)
+    if periodmatch !== nothing
+        periodtype = parse(Int, periodmatch[1])
+        periodnames[periodtype] = string(x.fieldname)
+    end
+
+end
 
 include("types.jl")
 include("PLEXOSSolutionDataset.jl")

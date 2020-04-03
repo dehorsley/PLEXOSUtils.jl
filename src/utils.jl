@@ -4,13 +4,12 @@ function open_plexoszip(zippath::String)
     return archive, xmlname
 end
 
-function phasevalues(archive::Archive)
+function perioddata(archive::Archive)
     results = Dict{Int,Vector{UInt8}}()
     for filename in keys(archive)
         rgx = match(r"t_data_(\d).BIN", filename)
         isnothing(rgx) && continue
         data = archive[filename]
-        println(filename, ": ", length(data))
         results[parse(Int, rgx[1])] = data
     end
     return results

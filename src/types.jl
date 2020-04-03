@@ -145,6 +145,19 @@ struct PLEXOSCollection
 
 end
 
+isobjects(coll::PLEXOSCollection) = coll.parentclass.name == "System"
+
+function h5plexosname(coll::PLEXOSCollection)
+    prefix = if isobjects(coll)
+        ""
+    elseif isnothing(coll.complementname)
+        coll.parentclass.name * "_"
+    else
+        coll.complementname * "_"
+    end
+    return sanitize(prefix * coll.name)
+end
+
 
 struct PLEXOSProperty
     name::String
@@ -371,10 +384,10 @@ PLEXOSKey(e::Node, d::AbstractDataset) =
 
 struct PLEXOSKeyIndex
     key::PLEXOSKey
-    periodtype::Int # maybe parametrize on this?
+    periodtype::Int
     position::Int # bytes from binary file start
     length::Int # 8-byte (Float64) increments
-    periodoffset::Int
+    periodoffset::Int # temporal data offset (if any) in stored times
 end
 
 PLEXOSKeyIndex(e::Node, d::AbstractDataset) =

@@ -1,31 +1,31 @@
+const H5PLEXOS_VERSION = "v0.6.0"
+
 function h5plexos(
     zipfilein::String, h5fileout::String;
     compressionlevel=1, strlen=128)
 
-    # Load zipfile data
     resultsarchive, xmlname = open_plexoszip(zipfilein)
     data = PLEXOSSolutionDataset(parsexml(resultsarchive[xmlname]))
-    resultvalues = phasevalues(resultsarchive)
+    resultvalues = perioddata(resultsarchive)
 
     h5open(h5fileout, "w") do h5file::HDF5File
         addconfigs!(h5file, data)
         membership_idxs = addcollections!(h5file, data, strlen, compressionlevel)
-        addvalues!(h5file, data, membership_idxs, resultvalues)
+        #addtimes!(h5file, data)
+        addvalues!(h5file, data, membership_idxs, resultvalues, compressionlevel)
     end
-
-    # Next - advance pass through keys to determine number of phases per property
-
-    # Given a keyindex - period type, property, property collection determine dimensions
-    #  - period type determines whether to use name/unit or summaryname/summaryunit
-    #  - pull binary data and store in appropriate indices
 
 end
 
 function addconfigs!(f::HDF5File, data::PLEXOSSolutionDataset)
+
     rootattrs = attrs(f)
+    rootattrs["h5plexos"] = H5PLEXOS_VERSION
+
     for config in data.configs
         rootattrs[config.element] = config.value
     end
+
 end
 
 function addcollections!(
@@ -39,7 +39,7 @@ function addcollections!(
             counts[membership.collection] += 1
         else
             counts[membership.collection] = 1
-        end 
+        end
     end
 
     collections = Dict(
@@ -57,7 +57,7 @@ function addcollections!(
         membership_idxs[membership] = collection_idx
 
         collection_memberships[collection_idx] =
-            isnothing(collection.complementname) ?
+            isobjects(collection) ?
                 (membership.childobject.name, # object collection
                  membership.childobject.category.name) :
                 (membership.parentobject.name, # relation collection
@@ -74,21 +74,13 @@ function addcollections!(
     for collection in keys(collections)
 
         collection_memberships, _ = collections[collection]
+        name = h5plexosname(collection)
 
-        if collection.parentclass.name == "System" # object collection
+        group, colnames = isobjects(collection) ?
+            (h5objects, ("name", "category")) :
+            (h5relations, ("parent", "child"))
 
-            string_table!(h5objects, sanitize(collection.name), strlen,
-                          ("name", "category"), collection_memberships)
-
-        else # relation collection
-
-            prefix = isnothing(collection.complementname) ?
-                collection.parentclass.name : collection.complementname
-
-            string_table!(h5relations, sanitize(prefix * "_" * collection.name),
-                          strlen, ("parent", "child"), collection_memberships)
-
-        end
+        string_table!(group, name, strlen, colnames, collection_memberships)
 
     end
 
@@ -97,35 +89,88 @@ function addcollections!(
 end
 
 function addvalues!(
-    h5file::HDF5File, data::PLEXOSSolutionDataset,
+    f::HDF5File, data::PLEXOSSolutionDataset,
     membership_idxs::Dict{PLEXOSMembership,Int},
-    resultvalues::Dict{Int,Vector{UInt8}})
+    resultvalues::Dict{Int,Vector{UInt8}},
+    compressionlevel::Int)
+
+    propertybands = Dict{PLEXOSProperty,Int}()
+
+    # Advance pass through keys to determine number of bands per property
+    for key in data.keys
+        if key.property in keys(propertybands)
+            propertybands[key.property] =
+                max(propertybands[key.property], key.band)
+        else
+            propertybands[key.property] = key.band
+        end
+    end
+
+    h5data = g_create(f, "data")
 
     for ki in data.keyindices
 
-        key = ki.key
-        periodtype = ki.periodtype
-        collection = key.membership.collection
-        collection_idx = membership_idxs[key.membership]
-        property = key.property
+        dset = dataset!(h5data, ki, propertybands, compressionlevel)
+        member_idx = membership_idxs[ki.key.membership]
 
         start_idx = ki.position + 1
         end_idx = ki.position + 8*ki.length
-        rawvalues = view(resultvalues[periodtype], start_idx:end_idx)
+        rawvalues = view(resultvalues[ki.periodtype], start_idx:end_idx)
         values = reinterpret(Float64, rawvalues)
 
-        data_interval = ki.periodoffset .+ (1:length(values))
-
-        # Create the phase/period/property dataset if needed,
-        # and write relevant data to it
+        dset[ki.key.band, :, member_idx] = values
 
     end
 
 end
 
-# KeyIndex.periodoffset describes any mismatch between the binary data
-# starting point and the provided intervals
+function dataset!(h5data::HDF5Group, ki::PLEXOSKeyIndex,
+                  propertybands::Dict{PLEXOSProperty,Int},
+                  compressionlevel::Int)
 
+    collection = ki.key.membership.collection
+    property = ki.key.property
+
+    phase = phasenames[ki.key.phase]
+    period = periodnames[ki.periodtype]
+    coll = h5plexosname(collection)
+    summarydata = property.issummary && (ki.periodtype != 0)
+    prop = summarydata ? property.summaryname : property.name
+
+    h5phase = exists(h5data, phase) ? h5data[phase] : g_create(h5data, phase)
+    h5period = exists(h5phase, period) ? h5phase[period] : g_create(h5phase, period)
+    h5coll = exists(h5period, coll) ? h5period[coll] : g_create(h5period, coll)
+
+    if exists(h5coll, prop)
+
+        dset = h5coll[prop]
+
+    else
+
+        nbands = propertybands[property]
+        ntimes = ki.length
+
+        collectiontype = isobjects(collection) ? "objects" : "relations"
+        members = HDF5.root(h5data)["metadata/" * collectiontype * "/" * coll]
+        nmembers = length(members)
+
+        dset = d_create(h5coll, prop, HDF5.datatype(Float64),
+                        HDF5.dataspace(nbands, ntimes, nmembers),
+                        "chunk", (nbands, ntimes, 1),
+                        "compress", compressionlevel)
+
+        dset_attrs = attrs(dset)
+        dset_attrs["period_offset"] = ki.periodoffset
+        dset_attrs["units"] =
+            summarydata ? property.summaryunit.value : property.unit.value
+
+    end
+
+    return dset
+
+end
+
+# TODO: Time periods
 # Period type 0 - phase-native interval data (blocks)
 # Maps to ST period 0 via relevant phase table
 # Store both block and interval results on disk (if not ST)
