@@ -2,7 +2,8 @@ const H5PLEXOS_VERSION = "v0.6.0"
 
 function h5plexos(
     zipfilein::String, h5fileout::String;
-    compressionlevel=1, strlen=128)
+    compressionlevel=1, strlen=128,
+    timestampformat::DateFormat=DateFormat("d/m/y H:M:S"))
 
     resultsarchive, xmlname = open_plexoszip(zipfilein)
     data = PLEXOSSolutionDataset(parsexml(resultsarchive[xmlname]))
@@ -11,7 +12,7 @@ function h5plexos(
     h5open(h5fileout, "w") do h5file::HDF5File
         addconfigs!(h5file, data)
         membership_idxs = addcollections!(h5file, data, strlen, compressionlevel)
-        #addtimes!(h5file, data)
+        addtimes!(h5file, data, timestampformat, compressionlevel)
         addvalues!(h5file, data, membership_idxs, resultvalues, compressionlevel)
     end
 
@@ -170,10 +171,35 @@ function dataset!(h5data::HDF5Group, ki::PLEXOSKeyIndex,
 
 end
 
-# TODO: Time periods
-# Period type 0 - phase-native interval data (blocks)
-# Maps to ST period 0 via relevant phase table
-# Store both block and interval results on disk (if not ST)
+function addtimes!(f::HDF5File, data::PLEXOSSolutionDataset,
+                   localformat::DateFormat, compressionlevel::Int)
 
-# Period type 1-7 - period-type-specific data
-# Direct mapping to period labels
+    # PLEXOS data format notes:
+    # Period type 0 - phase-native interval / block data
+    # Maps to ST periodtype 0 via relevant phase table
+    # Store both block and interval results on disk (if not ST)?
+
+    # Period type 1-7 - period-type-specific data
+    # Direct mapping to period labels
+
+    stdformat = DateFormat("yyyy-mm-ddTHH:MM:SS")
+    h5times = g_create(f["metadata"], "times")
+
+    periodtypes = [(t.fieldname, t.timestampfield)
+                   for t in plexostables
+                   if t.timestampfield !== nothing]
+
+    for (dfield, pfield) in periodtypes
+
+        uselocalformat = dfield == :intervals || dfield == :hours
+        periodset = getfield(data, dfield)
+        length(periodset) == 0 && continue
+
+        period_dts = DateTime.(getfield.(periodset, pfield),
+                               uselocalformat ? localformat : stdformat)
+        issorted(period_dts) || error("$(string(dfield)) not sorted")
+        h5times[string(dfield)] = format.(period_dts, stdformat)
+
+    end
+
+end

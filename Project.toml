@@ -4,6 +4,7 @@ authors = ["Gord Stephen <gord.stephen@nrel.gov>"]
 version = "0.0.1"
 
 [deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 EzXML = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
 HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 InfoZIP = "f4508453-b816-52ab-a864-26fc7f6211fc"
