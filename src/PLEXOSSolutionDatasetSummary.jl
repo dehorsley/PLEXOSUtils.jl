@@ -1,17 +1,21 @@
-function summarize(zippath::String)
+eval(Expr(
+    :struct, true, :PLEXOSSolutionDatasetSummary, Expr(:block,
+        [:($(t.fieldname)::Tuple{Int,Int}) for t in plexostables]...
+    )
+))
 
-    resultsarchive, xmlname = summarize(open_plexoszip(zippath)...)
+PLEXOSSolutionDatasetSummary() =
+    PLEXOSSolutionDatasetSummary(((0,0) for _ in 1:length(plexostables))...)
+
+function PLEXOSSolutionDatasetSummary(zippath::String)
+
+    resultsarchive, xmlname = _open_plexoszip(zippath)
     xml = parsexml(resultsarchive[xmlname])
-    return summarize(xml)
-
-    # TODO:
-    # Pull out binary files
-    # Scan XML file and track largest index of each table group
-    # Check binary file sizes and compare against expected sizes from XML references
+    return PLEXOSSolutionDatasetSummary(xml)
 
 end
 
-function summarize(xml::Document)
+function PLEXOSSolutionDatasetSummary(xml::Document)
 
     summary = PLEXOSSolutionDatasetSummary()
 

@@ -2,11 +2,8 @@ module PLEXOSUtils
 
 import EzXML: Document, eachelement, namespace, Node, nodecontent, parsexml
 import InfoZIP: Archive, open_zip
-import HDF5
-import HDF5: attrs, d_create, exists, g_create, h5open, HDF5File, HDF5Group
-import Dates: DateTime, DateFormat, format
 
-export h5plexos, PLEXOSSolutionDataset
+export open_plexoszip, PLEXOSSolutionDataset, PLEXOSSolutionDatasetSummary
 
 struct PLEXOSTable
 
@@ -67,37 +64,11 @@ plexostables = [
 
 ]
 
-plexostables_lookup = Dict{String,PLEXOSTable}()
-
-phase_rgx = r"^t_phase_(\d)$"
-phasenames = Dict{Int,String}()
-
-period_rgx = r"^t_period_(\d)$"
-periodnames = Dict{Int,String}()
-
-for x in plexostables
-
-    plexostables_lookup[x.name] = x
-
-    phasematch = match(phase_rgx, x.name)
-    if phasematch !== nothing
-        phase = parse(Int, phasematch[1])
-        phasenames[phase] = uppercase(string(x.fieldname))
-    end
-
-    isnothing(x.timestampfield) && continue
-    periodmatch = match(period_rgx, x.name)
-    if periodmatch !== nothing
-        periodtype = parse(Int, periodmatch[1])
-        periodnames[periodtype] = string(x.fieldname)
-    end
-
-end
+plexostables_lookup = Dict(x.name => x for x in plexostables)
 
 include("types.jl")
+include("PLEXOSSolutionDatasetSummary.jl")
 include("PLEXOSSolutionDataset.jl")
-include("summarize.jl")
 include("utils.jl")
-include("h5plexos.jl")
 
 end

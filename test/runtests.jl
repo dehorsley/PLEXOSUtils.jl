@@ -2,8 +2,8 @@ using PLEXOSUtils
 
 # TODO: Actually test things
 function runtest(zippath::String)
+    PLEXOSSolutionDatasetSummary(zippath)
     PLEXOSSolutionDataset(zippath)
-    h5plexos(zippath, replace(zippath, ".zip" => ".h5"))
 end
 
 testfolder = dirname(@__FILE__) * "/"

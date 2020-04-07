@@ -1,14 +1,3 @@
-# PLEXOSSolutionDatasetSummary
-
-eval(Expr(
-    :struct, true, :PLEXOSSolutionDatasetSummary, Expr(:block,
-        [:($(t.fieldname)::Tuple{Int,Int}) for t in plexostables]...
-    )
-))
-
-PLEXOSSolutionDatasetSummary() =
-    PLEXOSSolutionDatasetSummary(((0,0) for _ in 1:length(plexostables))...)
-
 # IndexCounter
 
 eval(Expr(
@@ -33,21 +22,15 @@ eval(Expr(
     )
 ))
 
-function PLEXOSSolutionDataset(
-    summary::PLEXOSSolutionDatasetSummary;
-    consolidated::Bool=false)
-
-    selector = consolidated ? first : last
-
-    return PLEXOSSolutionDataset((
-        Vector{eval(t.fieldtype)}(undef, selector(getfield(summary, t.fieldname)))
-        for t in plexostables)...)
-
+function PLEXOSSolutionDataset(zippath::String)
+    resultsarchive, xmlname = _open_plexoszip(zippath)
+    xml = parsexml(resultsarchive[xmlname])
+    return PLEXOSSolutionDataset(xml)
 end
 
 function PLEXOSSolutionDataset(xml::Document)
 
-    summary = summarize(xml)
+    summary = PLEXOSSolutionDatasetSummary(xml)
     result = PLEXOSSolutionDataset(summary, consolidated=false)
     idxcounter = IndexCounter()
 
@@ -77,10 +60,16 @@ function PLEXOSSolutionDataset(xml::Document)
 
 end
 
-function PLEXOSSolutionDataset(zippath::String)
-    resultsarchive, xmlname = open_plexoszip(zippath)
-    xml = parsexml(resultsarchive[xmlname])
-    return PLEXOSSolutionDataset(xml)
+function PLEXOSSolutionDataset(
+    summary::PLEXOSSolutionDatasetSummary;
+    consolidated::Bool=false)
+
+    selector = consolidated ? first : last
+
+    return PLEXOSSolutionDataset((
+        Vector{eval(t.fieldtype)}(undef, selector(getfield(summary, t.fieldname)))
+        for t in plexostables)...)
+
 end
 
 function consolidate(

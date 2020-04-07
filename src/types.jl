@@ -145,19 +145,6 @@ struct PLEXOSCollection
 
 end
 
-isobjects(coll::PLEXOSCollection) = coll.parentclass.name == "System"
-
-function h5plexosname(coll::PLEXOSCollection)
-    prefix = if isobjects(coll)
-        ""
-    elseif isnothing(coll.complementname)
-        coll.parentclass.name * "_"
-    else
-        coll.complementname * "_"
-    end
-    return sanitize(prefix * coll.name)
-end
-
 
 struct PLEXOSProperty
     name::String
