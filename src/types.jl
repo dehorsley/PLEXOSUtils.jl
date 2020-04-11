@@ -107,13 +107,26 @@ struct PLEXOSAttribute
     description::String
     enum::Int
     class::PLEXOSClass
-end
 
-PLEXOSAttribute(e::Node, d::AbstractDataset) =
-    PLEXOSAttribute(getchildtext("name", e),
-                    getchildtext("description", e),
-                    getchildint("enum_id", e),
-                    d.classes[getchildint("class_id", e)])
+    # PLEXOS sometimes reports attributes without reporting the classes they
+    # refer to: if that happens, just leave the classes undefined
+
+    function PLEXOSAttribute(e::Node, d::AbstractDataset)
+
+        name = getchildtext("name", e)
+        description = getchildtext("description", e)
+        enum = getchildint("enum_id", e)
+        class_idx = getchildint("class_id", e)
+
+        if isassigned(d.classes, class_idx)
+            new(name, description, enum, d.classes[class_idx])
+        else
+            new(name, description, enum)
+        end
+
+    end
+
+end
 
 
 struct PLEXOSCollection
@@ -224,15 +237,29 @@ PLEXOSMembership(e::Node, d::AbstractDataset) =
 
 
 struct PLEXOSAttributeData
+
     value::Float64
     attribute::PLEXOSAttribute
     object::PLEXOSObject
-end
 
-PLEXOSAttributeData(e::Node, d::AbstractDataset) =
-    PLEXOSAttributeData(getchildfloat("value", e),
-                        d.attributes[getchildint("attribute_id", e)],
-                        d.objects[getchildint("object_id", e)])
+    function PLEXOSAttributeData(e::Node, d::AbstractDataset)
+
+        value = getchildfloat("value", e)
+        attribute = d.attributes[getchildint("attribute_id", e)]
+        object_idx = getchildint("object_id", e)
+
+        # PLEXOS sometimes reports attributes without reporting the objects they
+        # refer to: if that happens, just leave the objects undefined
+
+        if isassigned(d.objects, object_idx)
+            new(value, attribute, d.objects[object_idx])
+        else
+            new(value, attribute)
+        end
+
+    end
+
+end
 
 
 # Results
