@@ -7,9 +7,11 @@ end
 
 function _open_plexoszip(zippath::String)
     isfile(zippath) || error("$zippath does not exist")
-    xmlname = match(r"^(.+)\.zip$", basename(zippath)).captures[1] * ".xml"
     archive = open_zip(zippath)
-    return archive, xmlname
+    filenames = keys(archive)
+    xml_idx = findfirst(x -> !isnothing(match(r".xml$", x)), filenames)
+    isnothing(xml_idx) && error("$zippath does not contain a valid XML file")
+    return archive, filenames[xml_idx]
 end
 
 function perioddata(archive::Archive)
