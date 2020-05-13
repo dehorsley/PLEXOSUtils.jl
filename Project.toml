@@ -6,6 +6,7 @@ version = "0.1.1"
 [deps]
 EzXML = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
 InfoZIP = "f4508453-b816-52ab-a864-26fc7f6211fc"
+Profile = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
 
 [compat]
 julia = "1"

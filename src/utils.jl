@@ -23,12 +23,15 @@ function perioddata(archive::Archive)
     return results
 end
 
-function getchildtext(name::String, e::Node)
-    resultnode = findfirst("x:" * name, e, ["x"=>namespace(e)])
-    isnothing(resultnode) && error("$e does not have child $name")
-    return nodecontent(resultnode)
+function getchildtext(name::String, xmlstream::StreamReader)
+    for node in xmlstream
+        nodedepth(xmlstream) == 1 && break
+        node == READER_ELEMENT || continue
+        nodename(xmlstream) == name && return nodecontent(xmlstream)
+    end
+    error("$e does not have child $name")
 end
 
-getchildfloat(name::String, e::Node) = parse(Float64, getchildtext(name, e))
-getchildint(name::String, e::Node) = parse(Int, getchildtext(name, e))
-getchildbool(name::String, e::Node) = parse(Bool, getchildtext(name, e))
+getchildfloat(name::String, s::StreamReader) = parse(Float64, getchildtext(name, s))
+getchildint(name::String, s::StreamReader) = parse(Int, getchildtext(name, s))
+getchildbool(name::String, s::StreamReader) = parse(Bool, getchildtext(name, s))

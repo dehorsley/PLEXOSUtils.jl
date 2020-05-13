@@ -1,38 +1,39 @@
-eval(Expr(
-    :struct, true, :PLEXOSSolutionDatasetSummary, Expr(:block,
-        [:($(t.fieldname)::Tuple{Int,Int}) for t in plexostables]...
-    )
-))
-
-PLEXOSSolutionDatasetSummary() =
-    PLEXOSSolutionDatasetSummary(((0,0) for _ in 1:length(plexostables))...)
-
-function PLEXOSSolutionDatasetSummary(zippath::String)
+function summarize(zippath::String)
 
     resultsarchive, xmlname = _open_plexoszip(zippath)
-    xml = parsexml(resultsarchive[xmlname])
-    return PLEXOSSolutionDatasetSummary(xml)
+    xml = IOBuffer(resultsarchive[xmlname])
+    return summarize(xml)
 
 end
 
-function PLEXOSSolutionDatasetSummary(xml::Document)
+function summarize(xml::IO)
 
-    summary = PLEXOSSolutionDatasetSummary()
+    summary = Dict(k => (0,0) for k in keys(plexostables))
 
-    for element in eachelement(xml.root)
+    xmlstream = StreamReader(xml)
+
+    iterate(xmlstream) # Move to root element
+    nodename(xmlstream) == "SolutionDataset" || error("Unrecognized XML data")
+
+    for node in xmlstream
+
+        node == READER_ELEMENT || continue
+        nodedepth(xmlstream) == 1 || continue
+
+        tablename = nodename(xmlstream)
 
         # Ignore the band table
-        element.name == "t_band" && continue
+        tablename == "t_band" && continue
 
-        table = plexostables_lookup[element.name]
-        count, maxidx = getfield(summary, table.fieldname)
+        table = plexostables[tablename]
+        count, maxidx = summary[tablename]
 
-        if isnothing(table.identifier)
-            setfield!(summary, table.fieldname, (count + 1, count + 1))
-        else
-            idx = getchildint(table.identifier, element)
+        if table.selfidentifying
+            idx = getchildint(identifiers[tablename], xmlstream)
             table.zeroindexed && (idx += 1)
-            setfield!(summary, table.fieldname, (count + 1, max(maxidx, idx)))
+            summary[tablename] = (count + 1, max(maxidx, idx))
+        else
+            summary[tablename] = (count + 1, count + 1)
         end
 
     end

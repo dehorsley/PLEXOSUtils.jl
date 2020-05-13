@@ -1,24 +1,8 @@
-# IndexCounter
-
-eval(Expr(
-    :struct, true, :IndexCounter, Expr(:block,
-        [:($(t.fieldname)::Int) for t in plexostables if isnothing(t.identifier)]...
-    )
-))
-
-IndexCounter() = IndexCounter(zeros(Int, length(fieldnames(IndexCounter)))...)
-
-function increment!(x::IndexCounter, fieldname::Symbol)
-    idx = getfield(x, fieldname) + 1
-    setfield!(x, fieldname, idx)
-    return idx
-end
-
 # PLEXOSSolutionDataset
 
 eval(Expr(
     :struct, false, :(PLEXOSSolutionDataset <: AbstractDataset), Expr(:block,
-        [:($(t.fieldname)::Vector{$(t.fieldtype)}) for t in plexostables]...
+        map(t -> :($(fieldname(t))::$(tabletype(t))), plexostables)...
     )
 ))
 
@@ -28,53 +12,66 @@ function PLEXOSSolutionDataset(zippath::String)
     return PLEXOSSolutionDataset(xml)
 end
 
-function PLEXOSSolutionDataset(xml::Document)
+function PLEXOSSolutionDataset(xml::IO)
 
-    summary = PLEXOSSolutionDatasetSummary(xml)
+    summary = summarize(xml)
     result = PLEXOSSolutionDataset(summary, consolidated=false)
-    idxcounter = IndexCounter()
+    idxcounter = Dict(k => 0 for k in keys(plexostables)
+                             if !haskey(identifiers, t))
 
-    for loadorder in 1:7
-        for element in eachelement(xml.root)
+    # New strategy: single pass, filling in what data is possible right away
+    # and storing index numbers seperately. Then, go through tables in
+    # topological order and add in references based on stored indices.
 
-            # Ignore the band table
-            element.name == "t_band" && continue
+    xmlstream = StreamReader(xml)
+    iterate(xmlstream) # Move to root element
+    nodename(xmlstream) == "SolutionDataset" || error("Unrecognized XML data")
 
-            table = plexostables_lookup[element.name]
-            table.loadorder == loadorder || continue
+    for node in xmlstream
 
-            idx = if isnothing(table.identifier)
-                      increment!(idxcounter, table.fieldname)
-                  else
-                      getchildint(table.identifier, element)
-                  end
-            table.zeroindexed && (idx += 1)
+        node == READER_ELEMENT || continue
+        nodedepth(xmlstream) == 1 || continue
 
-            getfield(result, table.fieldname)[idx] =
-                eval(table.fieldtype)(element, result)
+        tablename = nodename(xmlstream)
 
-        end
+        # Ignore the band table
+        tablename == "t_band" && continue
+
+        table = plexostables[tablename]
+        #table.loadorder == loadorder || continue
+
+        idx = if haskey(identifiers, tablename)
+                  getchildint(identifiers[tablename], element)
+              else
+                  idxcounter[tablename] += 1
+              end
+        table.zeroindexed && (idx += 1)
+
+        populate!(result, table, element, idx)
+
     end
+
+    # Second pass to hook up memberships
 
     return consolidate(result, summary)
 
 end
 
 function PLEXOSSolutionDataset(
-    summary::PLEXOSSolutionDatasetSummary;
-    consolidated::Bool=false)
+    summary::Dict{String,Tuple{Int,Int}};
+    consolidated::Bool=false)::PLEXOSSolutionDataset
 
     selector = consolidated ? first : last
 
     return PLEXOSSolutionDataset((
-        Vector{eval(t.fieldtype)}(undef, selector(getfield(summary, t.fieldname)))
+        tabletype(t)(undef, selector(summary[t.fieldname]))
         for t in plexostables)...)
 
 end
 
 function consolidate(
     unconsolidated::PLEXOSSolutionDataset,
-    summary::PLEXOSSolutionDatasetSummary)
+    summary::Dict{String,Tuple{Int,Int}})
 
     result = PLEXOSSolutionDataset(summary, consolidated=true)
 
@@ -91,4 +88,11 @@ function consolidate(
 
     return result
 
+end
+
+function populate!(
+    data::PLEXOSSolutionDataset,
+    ::PLEXOSTable{T,S}, element::Node, idx::Int
+) where {T <: PLEXOSTableRow, S}
+    getfield(data, S)[idx] = T(element, data)
 end
