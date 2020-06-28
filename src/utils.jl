@@ -32,6 +32,9 @@ function getchildtext(name::String, xmlstream::StreamReader)
     error("$e does not have child $name")
 end
 
+getchild(::Type{T}, name::String, s::StreamReader) where T =
+    parse(T, getchildtext(name, s))
+
 getchildfloat(name::String, s::StreamReader) = parse(Float64, getchildtext(name, s))
 getchildint(name::String, s::StreamReader) = parse(Int, getchildtext(name, s))
 getchildbool(name::String, s::StreamReader) = parse(Bool, getchildtext(name, s))

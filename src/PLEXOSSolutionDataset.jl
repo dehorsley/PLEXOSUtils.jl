@@ -37,21 +37,23 @@ function PLEXOSSolutionDataset(xml::IO)
         # Ignore the band table
         tablename == "t_band" && continue
 
-        table = plexostables[tablename]
-        #table.loadorder == loadorder || continue
+        tablespec, tablefields = table_lookup[tablename]
+        row = tablespec.rowtype()
 
-        idx = if haskey(identifiers, tablename)
-                  getchildint(identifiers[tablename], element)
-              else
-                  idxcounter[tablename] += 1
-              end
-        table.zeroindexed && (idx += 1)
+        idx = parsexml!(row, xmlstream, tablespec, tablefields)
 
-        populate!(result, table, element, idx)
+        if isnothing(tablespec.identifier)
+            idx = (idxcounter[tablename] += 1)
+        end
+
+        tabledata = getfield(result, tablespec.fieldname)
+        tabledata[idx] = row
 
     end
 
-    # Second pass to hook up memberships
+    # TODO: Second pass to hook up memberships
+    # Preliminary table data -> final table data
+    # Convert in reverse topological order
 
     return consolidate(result, summary)
 
@@ -88,11 +90,4 @@ function consolidate(
 
     return result
 
-end
-
-function populate!(
-    data::PLEXOSSolutionDataset,
-    ::PLEXOSTable{T,S}, element::Node, idx::Int
-) where {T <: PLEXOSTableRow, S}
-    getfield(data, S)[idx] = T(element, data)
 end

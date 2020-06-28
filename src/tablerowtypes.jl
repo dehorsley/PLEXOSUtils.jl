@@ -185,6 +185,7 @@ const tables = [
         :PLEXOSKey, :keys, "t_key", "key_id", 6, false, 
         [FieldSpec(:phase, :Int, "phase_id"),
           # note this periodtype is not accurate, use KeyIndex.periodtype instead
+          # should this just be removed?
          FieldSpec(:periodtype, :Int, "period_type_id"),
          FieldSpec(:band, :Int, "band_id")],
         [FieldSpec(:membership, :PLEXOSMembership, "membership_id"),
@@ -203,12 +204,77 @@ const tables = [
 
 ]
 
-const identifiers = Dict(t.tablename => t.identifier
-                         for t in tables if !isnothing(t.identifier))
+const table_lookup = Dict{String,
+                          Tuple{TableSpec,
+                                Dict{String,
+                                     Tuple{Symbol,DataType}}
+                               }
+                         }()
 
-# TODO: Autogenerate structs
-# TODO: Autogenerate XML-parsing constructors
-# TODO: Autogenerate table data structs
+# TODO: Map rowtypes to iszeroindexed (as methods so known at compile time?)
+
+for ts in tablespecs
+
+    # Populate lookup dictionary
+    field_lookup = Dict{String,Tuple{Symbol,DataType}}()
+
+    for f in ts.basefields
+        field_lookup[f.xmlname] = (f.fieldname, f.fieldtype)
+    end
+
+    for f in ts.relationfields
+        field_lookup[f.xmlname] = (f.fieldname, Int)
+    end
+
+    table_lookup[ts.tablename] = (ts, field_lookup)
+
+    # Autogenerate preliminary table data structs
+    eval(Expr(
+        :struct, true, Expr(:call, :<:, Symbol(ts.rowtype, :prelim), :PLEXOSTableRow)
+        Expr(:block,
+            map(f -> Expr(:call, :(::), f.fieldname, f.fieldtype), ts.basefields)...,
+            map(t -> Expr(:call, :(::), f.fieldname, :Int), ts.relationfields)...,
+            Expr(:call, :(=), Expr(:call, ts.rowtype), Expr(:call, :new))
+        )
+    ))
+
+    # Autogenerate final table data structs
+    eval(Expr(
+        :struct, false, Expr(:call, :<:, ts.rowtype, :PLEXOSTableRow)
+        Expr(:block,
+            map(f -> Expr(:call, :(::), f.fieldname, f.fieldtype), ts.basefields)...,
+            map(t -> Expr(:call, :(::), f.fieldname, f.fieldtype), ts.relationfields)...
+        )
+    ))
+
+    # TODO: Autogenerate final constructors (internal)
+
+end
+
+function parsexml!(row::PLEXOSTableRow, xmlstream::StreamReader,
+                   tablespec::TableSpec, legend::Dict{String,Tuple{Symbol,Type}})
+
+    id = -1
+
+    for node in xmlstream
+
+        nodedepth(xmlstream) == 1 && break
+        node == READER_ELEMENT || continue
+        name = nodename(xmlstream)
+
+        if name in keys(legend)
+            fieldname, fieldtype = legend[name]
+            fieldvalue = parse(fieldtype, nodecontent(xmlstream))
+            setproperty!(row, fieldname, fieldvalue)
+        elseif name == tablespec.identifier
+            id = parse(Int, nodecontent(xmlstream))
+        end
+
+    end
+
+    return tablespec.zeroindexed ? (id + 1) : id
+
+end
 
 struct PLEXOSCategory <: PLEXOSTableRow
     name::String
