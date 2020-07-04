@@ -8,7 +8,6 @@ export open_plexoszip, PLEXOSSolutionDataset, summarize
 abstract type AbstractDataset end
 
 include("tablerowtypes.jl")
-include("tables.jl")
 include("PLEXOSSolutionDatasetSummary.jl")
 include("PLEXOSSolutionDataset.jl")
 include("utils.jl")

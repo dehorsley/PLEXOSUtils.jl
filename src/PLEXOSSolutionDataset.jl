@@ -1,10 +1,44 @@
+# PLEXOSPrelimSolutionDataset
+
+eval(Expr(
+    :struct, false, :(PLEXOSPrelimSolutionDataset <: AbstractDataset), Expr(
+        :block,
+        map(t -> :($(t.fieldname)::Vector{$(prelimrowtype(t))}), tables)...
+    )
+))
+
+function PLEXOSPrelimSolutionDataset(
+    summary::Dict{String,Tuple{Int,Int}};
+    consolidated::Bool=false)::PLEXOSPrelimSolutionDataset
+
+    selector = consolidated ? first : last
+
+    return PLEXOSPrelimSolutionDataset((
+        _(undef, selector(summary[t.fieldname]))
+        for t in plexostables)...)
+
+end
+
 # PLEXOSSolutionDataset
 
 eval(Expr(
-    :struct, false, :(PLEXOSSolutionDataset <: AbstractDataset), Expr(:block,
-        map(t -> :($(fieldname(t))::$(tabletype(t))), plexostables)...
+    :struct, false, :(PLEXOSSolutionDataset <: AbstractDataset), Expr(
+        :block,
+        map(t -> :($(t.fieldname)::Vector{$(t.rowtype)}), tables)...
     )
 ))
+
+function PLEXOSSolutionDataset(
+    summary::Dict{String,Tuple{Int,Int}};
+    consolidated::Bool=false)::PLEXOSSolutionDataset
+
+    selector = consolidated ? first : last
+
+    return PLEXOSSolutionDataset((
+        _(undef, selector(summary[t.fieldname]))
+        for t in plexostables)...)
+
+end
 
 function PLEXOSSolutionDataset(zippath::String)
     resultsarchive, xmlname = _open_plexoszip(zippath)
@@ -15,7 +49,8 @@ end
 function PLEXOSSolutionDataset(xml::IO)
 
     summary = summarize(xml)
-    result = PLEXOSSolutionDataset(summary, consolidated=false)
+
+    result_temp = PLEXOSPrelimSolutionDataset(summary, consolidated=false)
     idxcounter = Dict(k => 0 for k in keys(plexostables)
                              if !haskey(identifiers, t))
 
@@ -46,28 +81,27 @@ function PLEXOSSolutionDataset(xml::IO)
             idx = (idxcounter[tablename] += 1)
         end
 
-        tabledata = getfield(result, tablespec.fieldname)
+        tabledata = getfield(result_temp, tablespec.fieldname)
         tabledata[idx] = row
 
     end
 
-    # TODO: Second pass to hook up memberships
-    # Preliminary table data -> final table data
-    # Convert in reverse topological order
+    result = PLEXOSSolutionDataset(summary, consolidated=false)
+
+    for tablespec in sort(tables, by = x -> x.loadorder)
+
+        fieldname = tablespec.fieldname
+        tempdata = getfield(result_temp, fieldname)
+        data = getfield(result, fieldname)
+
+        for i in eachindex(tempdata)
+            isassigned(tempdata, i) || continue
+            data[i] = finalize(tempdata[i], tablespec, result)
+        end
+
+    end
 
     return consolidate(result, summary)
-
-end
-
-function PLEXOSSolutionDataset(
-    summary::Dict{String,Tuple{Int,Int}};
-    consolidated::Bool=false)::PLEXOSSolutionDataset
-
-    selector = consolidated ? first : last
-
-    return PLEXOSSolutionDataset((
-        tabletype(t)(undef, selector(summary[t.fieldname]))
-        for t in plexostables)...)
 
 end
 

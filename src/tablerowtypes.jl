@@ -1,3 +1,4 @@
+abstract type PLEXOSPrelimTableRow end
 abstract type PLEXOSTableRow end
 
 struct FieldSpec
@@ -16,6 +17,9 @@ struct TableSpec
     basefields::Vector{FieldSpec}
     relationfields::Vector{FieldSpec}
 end
+
+hasrelations(ts::TableSpec) = length(ts.relationfields) > 0
+prelimrowtype(ts::TableSpec) = Symbol(ts.rowtype, :Prelim)
 
 const tables = [
 
@@ -230,7 +234,8 @@ for ts in tablespecs
 
     # Autogenerate preliminary table data structs
     eval(Expr(
-        :struct, true, Expr(:call, :<:, Symbol(ts.rowtype, :prelim), :PLEXOSTableRow)
+        :struct, true,
+        Expr(:call, :<:, prelimrowtype(ts), :PLEXOSPrelimTableRow)
         Expr(:block,
             map(f -> Expr(:call, :(::), f.fieldname, f.fieldtype), ts.basefields)...,
             map(t -> Expr(:call, :(::), f.fieldname, :Int), ts.relationfields)...,
@@ -248,10 +253,30 @@ for ts in tablespecs
     ))
 
     # TODO: Autogenerate final constructors (internal)
+    # Should be able to construct TableRow with any number of trailing
+    # relation fields missing
 
 end
 
-function parsexml!(row::PLEXOSTableRow, xmlstream::StreamReader,
+function finalize(
+    row::PLEXOSPrelimTableRow{T}, ts::TableSpec,
+    dataset::PLEXOSPrelimSolutionDataSet)
+
+    basedata = map(f -> getfield(row, f.fieldname), ts.basefields)
+
+    relationdata = ()
+    for f in ts.relationfields
+        rels = getfield(dataset, ts.fieldname)
+        rel_idx = getfield(row, f.fieldname)
+        isassigned(rels, rel_idx) || break
+        relationdata = (rels[rel_idx], relationdata...)
+    end
+
+    return T(basedata..., relationdata...)
+
+end
+
+function parsexml!(row::PLEXOSPrelimTableRow, xmlstream::StreamReader,
                    tablespec::TableSpec, legend::Dict{String,Tuple{Symbol,Type}})
 
     id = -1
@@ -265,6 +290,7 @@ function parsexml!(row::PLEXOSTableRow, xmlstream::StreamReader,
         if name in keys(legend)
             fieldname, fieldtype = legend[name]
             fieldvalue = parse(fieldtype, nodecontent(xmlstream))
+            # TODO: Need to increment by one if zeroindexed
             setproperty!(row, fieldname, fieldvalue)
         elseif name == tablespec.identifier
             id = parse(Int, nodecontent(xmlstream))
