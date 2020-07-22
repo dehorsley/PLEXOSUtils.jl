@@ -8,7 +8,7 @@ end
 function _open_plexoszip(zippath::String)
     isfile(zippath) || error("$zippath does not exist")
     archive = open_zip(zippath)
-    filenames = keys(archive)
+    filenames = collect(keys(archive))
     xml_idx = findfirst(x -> !isnothing(match(r".xml$", x)), filenames)
     isnothing(xml_idx) && error("$zippath does not contain a valid XML file")
     return archive, filenames[xml_idx]
