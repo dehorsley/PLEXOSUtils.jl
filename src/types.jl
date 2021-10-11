@@ -385,7 +385,14 @@ PLEXOSPeriod7(e::Node, d::AbstractDataset) =
     PLEXOSPeriod7(getchildtext("quarter_beginning", e))
 
 
-# TODO: LT support?
+struct PLEXOSPhase1
+    interval::PLEXOSPeriod0
+    period::Int # LT period
+end
+
+PLEXOSPhase1(e::Node, d::AbstractDataset) =
+    PLEXOSPhase1(d.intervals[getchildint("interval_id", e)],
+                 getchildint("period_id", e))
 
 struct PLEXOSPhase2
     interval::PLEXOSPeriod0

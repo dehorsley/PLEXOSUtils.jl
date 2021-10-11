@@ -58,6 +58,7 @@ plexostables = [
     PLEXOSTable("t_period_6", :hours, :PLEXOSPeriod6, 1, "hour_id", :datetime),
     PLEXOSTable("t_period_7", :quarters, :PLEXOSPeriod7, 1, "quarter_id", :quarter_beginning),
 
+    PLEXOSTable("t_phase_1", :lt, :PLEXOSPhase1, 2),
     PLEXOSTable("t_phase_2", :pasa, :PLEXOSPhase2, 2),
     PLEXOSTable("t_phase_3", :mt, :PLEXOSPhase3, 2),
     PLEXOSTable("t_phase_4", :st, :PLEXOSPhase4, 2),
