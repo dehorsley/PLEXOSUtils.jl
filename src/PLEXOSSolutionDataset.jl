@@ -46,9 +46,8 @@ function PLEXOSSolutionDataset(xml::Document)
             idx = if isnothing(table.identifier)
                       increment!(idxcounter, table.fieldname)
                   else
-                      getchildint(table.identifier, element)
+                      getchildint(table.identifier, element) + table.indexoffset
                   end
-            table.zeroindexed && (idx += 1)
 
             getfield(result, table.fieldname)[idx] =
                 eval(table.fieldtype)(element, result)
