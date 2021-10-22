@@ -30,8 +30,7 @@ function PLEXOSSolutionDatasetSummary(xml::Document)
         if isnothing(table.identifier)
             setfield!(summary, table.fieldname, (count + 1, count + 1))
         else
-            idx = getchildint(table.identifier, element)
-            table.zeroindexed && (idx += 1)
+            idx = getchildint(table.identifier, element) + table.indexoffset
             setfield!(summary, table.fieldname, (count + 1, max(maxidx, idx)))
         end
 

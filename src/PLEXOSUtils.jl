@@ -13,26 +13,26 @@ struct PLEXOSTable
     loadorder::Int
     identifier::Union{String,Nothing}
     timestampfield::Union{Symbol,Nothing}
-    zeroindexed::Bool
+    indexoffset::Int
 
     PLEXOSTable(name::String, fieldname::Symbol, fieldtype::Symbol,
                 loadorder::Int,
                 identifier::Union{String,Nothing}=nothing,
                 timestampfield::Union{Symbol,Nothing}=nothing,
-                zeroindexed::Bool=false
+                indexoffset::Int=0
     ) = new(name, fieldname, fieldtype, loadorder,
-            identifier, timestampfield, zeroindexed)
+            identifier, timestampfield, indexoffset)
 
 end
 
 plexostables = [
 
     PLEXOSTable("t_config", :configs, :PLEXOSConfig, 1),
-    PLEXOSTable("t_unit", :units, :PLEXOSUnit, 1, "unit_id", nothing, true),
-    PLEXOSTable("t_timeslice", :timeslices, :PLEXOSTimeslice, 1, "timeslice_id", nothing, true),
+    PLEXOSTable("t_unit", :units, :PLEXOSUnit, 1, "unit_id", nothing, 1),
+    PLEXOSTable("t_timeslice", :timeslices, :PLEXOSTimeslice, 1, "timeslice_id", nothing, 1),
     PLEXOSTable("t_model", :models, :PLEXOSModel, 1, "model_id"),
 
-    PLEXOSTable("t_sample", :samples, :PLEXOSSample, 1, "sample_id", nothing, true),
+    PLEXOSTable("t_sample", :samples, :PLEXOSSample, 1, "sample_id", nothing, 4),
     PLEXOSTable("t_sample_weight", :sampleweights, :PLEXOSSampleWeight, 2),
 
     PLEXOSTable("t_class_group", :classgroups, :PLEXOSClassGroup, 1, "class_group_id"),

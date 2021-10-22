@@ -50,9 +50,9 @@ struct PLEXOSSampleWeight
     value::Float64
 end
 
+const sample_offset = plexostables_lookup["t_sample"].indexoffset
 PLEXOSSampleWeight(e::Node, d::AbstractDataset) =
-    # TODO: Abstract away zero-indexing here?
-    PLEXOSSampleWeight(d.samples[getchildint("sample_id", e) + 1],
+    PLEXOSSampleWeight(d.samples[getchildint("sample_id", e) + sample_offset],
                        getchildint("phase_id", e),
                        getchildfloat("value", e))
 
@@ -441,7 +441,7 @@ PLEXOSKey(e::Node, d::AbstractDataset) =
               d.properties[getchildint("property_id", e)],
               getchildint("period_type_id", e),
               getchildint("band_id", e),
-              d.samples[getchildint("sample_id", e) + 1],
+              d.samples[getchildint("sample_id", e) + sample_offset],
               d.timeslices[getchildint("timeslice_id", e) + 1])
 
 struct PLEXOSKeyIndex
