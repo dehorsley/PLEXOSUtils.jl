@@ -386,42 +386,80 @@ PLEXOSPeriod7(e::Node, d::AbstractDataset) =
 
 
 struct PLEXOSPhase1
-    interval::PLEXOSPeriod0
-    period::Int # LT period
-end
 
-PLEXOSPhase1(e::Node, d::AbstractDataset) =
-    PLEXOSPhase1(d.intervals[getchildint("interval_id", e)],
-                 getchildint("period_id", e))
+    period::Int # LT period
+    interval::PLEXOSPeriod0
+
+    function PLEXOSPhase1(e::Node, d::AbstractDataset)
+
+        period = getchildint("period_id", e)
+
+        if length(d.intervals) > 0
+            new(period, d.intervals[getchildint("interval_id", e)])
+        else
+            new(period)
+        end
+
+    end
+
+end
 
 struct PLEXOSPhase2
-    interval::PLEXOSPeriod0
-    period::Int # PASA period
-end
 
-PLEXOSPhase2(e::Node, d::AbstractDataset) =
-    PLEXOSPhase2(d.intervals[getchildint("interval_id", e)],
-                 getchildint("period_id", e))
+    period::Int # PASA period
+    interval::PLEXOSPeriod0
+
+    function PLEXOSPhase2(e::Node, d::AbstractDataset)
+
+        period = getchildint("period_id", e)
+
+        if length(d.intervals) > 0
+            new(period, d.intervals[getchildint("interval_id", e)])
+        else
+            new(period)
+        end
+
+    end
+
+end
 
 struct PLEXOSPhase3
-    interval::PLEXOSPeriod0
+
     period::Int # MT period
+    interval::PLEXOSPeriod0
+
+    function PLEXOSPhase3(e::Node, d::AbstractDataset)
+
+        period = getchildint("period_id", e)
+
+        if length(d.intervals) > 0
+            new(period, d.intervals[getchildint("interval_id", e)])
+        else
+            new(period)
+        end
+
+    end
+
 end
-
-PLEXOSPhase3(e::Node, d::AbstractDataset) =
-    PLEXOSPhase3(d.intervals[getchildint("interval_id", e)],
-                 getchildint("period_id", e))
-
 
 struct PLEXOSPhase4 # are these values always 1:1 matches?
-    interval::PLEXOSPeriod0
+
     period::Int # ST period
+    interval::PLEXOSPeriod0
+
+    function PLEXOSPhase4(e::Node, d::AbstractDataset)
+
+        period = getchildint("period_id", e)
+
+        if length(d.intervals) > 0
+            new(period, d.intervals[getchildint("interval_id", e)])
+        else
+            new(period)
+        end
+
+    end
+
 end
-
-PLEXOSPhase4(e::Node, d::AbstractDataset) =
-    PLEXOSPhase4(d.intervals[getchildint("interval_id", e)],
-                 getchildint("period_id", e))
-
 
 struct PLEXOSKey
     membership::PLEXOSMembership
