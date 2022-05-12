@@ -1,18 +1,22 @@
-function open_plexoszip(zippath::String)
-    resultsarchive, xmlname = _open_plexoszip(zippath)
-    data = PLEXOSSolutionDataset(parsexml(resultsarchive[xmlname]))
+function open_plexoszip(zippath::String, xmlname::String=defaultxml(zippath))
+
+    resultsarchive = _open_plexoszip(zippath)
+    xml = parsexml(resultsarchive[xmlname])
+
+    data = PLEXOSSolutionDataset(xml)
     resultvalues = perioddata(resultsarchive)
+
     return data, resultvalues
+
 end
 
 function _open_plexoszip(zippath::String)
     isfile(zippath) || error("$zippath does not exist")
     archive = open_zip(zippath)
-    filenames = collect(keys(archive))
-    xml_idx = findfirst(x -> !isnothing(match(r".xml$", x)), filenames)
-    isnothing(xml_idx) && error("$zippath does not contain a valid XML file")
-    return archive, filenames[xml_idx]
+    return archive
 end
+
+defaultxml(zippath::String) = replace(basename(zippath), r".zip$"=>".xml")
 
 function perioddata(archive::Archive)
     results = Dict{Int,Vector{UInt8}}()

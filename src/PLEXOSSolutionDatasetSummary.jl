@@ -7,9 +7,11 @@ eval(Expr(
 PLEXOSSolutionDatasetSummary() =
     PLEXOSSolutionDatasetSummary(((0,0) for _ in 1:length(plexostables))...)
 
-function PLEXOSSolutionDatasetSummary(zippath::String)
+function PLEXOSSolutionDatasetSummary(
+    zippath::String, xmlname::String=defaultxml(zippath)
+)
 
-    resultsarchive, xmlname = _open_plexoszip(zippath)
+    resultsarchive = _open_plexoszip(zippath)
     xml = parsexml(resultsarchive[xmlname])
     return PLEXOSSolutionDatasetSummary(xml)
 

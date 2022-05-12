@@ -22,8 +22,11 @@ eval(Expr(
     )
 ))
 
-function PLEXOSSolutionDataset(zippath::String)
-    resultsarchive, xmlname = _open_plexoszip(zippath)
+function PLEXOSSolutionDataset(
+    zippath::String, xmlname::String=defaultxml(zippath)
+)
+
+    resultsarchive = _open_plexoszip(zippath)
     xml = parsexml(resultsarchive[xmlname])
     return PLEXOSSolutionDataset(xml)
 end
